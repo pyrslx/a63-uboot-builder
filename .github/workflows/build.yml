@@ -1,0 +1,39 @@
+name: Compile Allwinner U-Boot
+
+on:
+  workflow_dispatch: # Allows you to manually trigger the build with a button click
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install Build Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu bison flex libssl-dev device-tree-compiler git make
+
+    - name: Clone ARM Trusted Firmware (TF-A)
+      run: |
+        git clone --depth 1 https://github.com
+        cd arm-trusted-firmware
+        make CROSS_COMPILE=aarch64-linux-gnu- PLAT=sun50i_h6 bl31
+        echo "BL31=$(pwd)/build/sun50i_h6/release/bl31.bin" >> $GITHUB_ENV
+
+    - name: Clone and Compile Mainline U-Boot
+      run: |
+        git clone --depth 1 https://denx.de
+        cd u-boot
+        # Using a highly compatible sun50i sister config for the A63 processor
+        make CROSS_COMPILE=aarch64-linux-gnu- pine_h64_defconfig
+        make CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
+        
+        # Copy the finished boot bundle to a temporary export directory
+        mkdir -p ../output
+        cp u-boot-sunxi-with-spl.bin ../output/
+
+    - name: Upload Finished Bootloader Image
+      uses: actions/upload-artifact@v4
+      with:
+        name: allwinner-a63-uboot
+        path: output/u-boot-sunxi-with-spl.bin
