@@ -21,15 +21,19 @@ jobs:
         git clone --depth 1 https://github.com
         cd arm-trusted-firmware
         make CROSS_COMPILE=aarch64-linux-gnu- PLAT=sun50i_h6 bl31
-        echo "BL31_BIN_PATH=$(pwd)/build/sun50i_h6/release/bl31.bin" >> $GITHUB_ENV
 
     - name: Fetch and Compile Mainline U-Boot
       run: |
-        git clone --depth 1 https://denx.de
+        git clone --depth 1 https://source.denx.de/u-boot/u-boot.git
         cd u-boot
-        export BL31=${{ env.BL31_BIN_PATH }}
+        
+        # Configure U-Boot using the compatible H6 sun50i profile
         make CROSS_COMPILE=aarch64-linux-gnu- pine_h64_defconfig
-        make CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
+        
+        # Inline the explicit path to the bl31.bin firmware we just compiled
+        make CROSS_COMPILE=aarch64-linux-gnu- BL31=../arm-trusted-firmware/build/sun50i_h6/release/bl31.bin -j$(nproc)
+        
+        # Package out the target binary image
         mkdir -p ../output
         cp u-boot-sunxi-with-spl.bin ../output/
 
