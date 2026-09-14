@@ -1,7 +1,7 @@
 name: Compile Allwinner A63 U-Boot
 
 on:
-  workflow_dispatch: # Allows you to manually trigger the build with a button click
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,9 +16,8 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y gcc-aarch64-linux-gnu bison flex libssl-dev device-tree-compiler git make
 
-    - name: Fetch and Compile ARM Trusted Firmware (TF-A)
+    - name: Fetch and Compile ARM Trusted Firmware
       run: |
-        # FIXED: Added the correct repository path to the clone command below
         git clone --depth 1 https://github.com
         cd arm-trusted-firmware
         make CROSS_COMPILE=aarch64-linux-gnu- PLAT=sun50i_h6 bl31
@@ -28,17 +27,9 @@ jobs:
       run: |
         git clone --depth 1 https://denx.de
         cd u-boot
-        
-        # Link the compiled TF-A secure monitor binary so U-Boot can wrap it
         export BL31=${{ env.BL31_BIN_PATH }}
-        
-        # Configure U-Boot using the compatible A64/H6 sun50i sister target
         make CROSS_COMPILE=aarch64-linux-gnu- pine_h64_defconfig
-        
-        # Run the compilation across all available CPU cores
         make CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
-        
-        # Gather the resulting system binaries into an explicit directory
         mkdir -p ../output
         cp u-boot-sunxi-with-spl.bin ../output/
 
